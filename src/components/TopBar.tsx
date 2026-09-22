@@ -2,8 +2,9 @@ import { Accessibility, Crown, Languages, LayoutDashboard, MapPin, PhoneCall, Re
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
+import { PointsSection } from '@/components/PointsSection'
 import { tableAreas } from '@/data/menu'
-import type { ViewName } from '@/types'
+import type { PointsState, PointsTier, ViewName } from '@/types'
 
 interface TopBarProps {
   table: string
@@ -11,17 +12,20 @@ interface TopBarProps {
   serviceCount: number
   language: string
   elderly: boolean
+  points: PointsState
   onToggleLanguage: () => void
   onToggleElderly: () => void
   onView: (view: ViewName) => void
   onService: () => void
   onConsole: () => void
+  onRedeem: (tier: PointsTier) => void
 }
 
-export function TopBar({ table, view, serviceCount, language, elderly, onToggleLanguage, onToggleElderly, onView, onService, onConsole }: TopBarProps) {
+export function TopBar({ table, view, serviceCount, language, elderly, points, onToggleLanguage, onToggleElderly, onView, onService, onConsole, onRedeem }: TopBarProps) {
   const { t } = useTranslation()
   const areaKey = tableAreas[table]
   const tableLabel = areaKey ? `${table} · ${t(areaKey)}` : table
+  const benefits = 4 + points.coupons.filter((coupon) => !coupon.used).length
 
   return (
     <>
@@ -51,8 +55,9 @@ export function TopBar({ table, view, serviceCount, language, elderly, onToggleL
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <div className="rounded-2xl bg-white p-4 shadow-sm"><p className="text-xs text-charcoal-500">{t('common.queue')}</p><p className="mt-2 text-2xl font-extrabold text-charcoal-900">A018</p><p className="text-xs text-chili-500">{t('common.queue_ahead')}</p></div>
-                <div className="rounded-2xl bg-white p-4 shadow-sm"><p className="text-xs text-charcoal-500">{t('common.benefits')}</p><p className="mt-2 text-2xl font-extrabold text-charcoal-900">4 <small className="text-sm">{t('common.tickets')}</small></p><p className="text-xs text-amber-500">{t('common.coupon')}</p></div>
+                <div className="rounded-2xl bg-white p-4 shadow-sm"><p className="text-xs text-charcoal-500">{t('common.benefits')}</p><p className="mt-2 text-2xl font-extrabold text-charcoal-900">{benefits} <small className="text-sm">{t('common.tickets')}</small></p><p className="text-xs text-amber-500">{t('common.coupon')}</p></div>
               </div>
+              <PointsSection points={points} onRedeem={onRedeem} />
             </DialogContent>
           </Dialog>
           <Button variant="outline" size="icon" onClick={onConsole} aria-label={t('common.aria_console')}><LayoutDashboard size={18} /></Button>

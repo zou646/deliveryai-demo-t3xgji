@@ -40,6 +40,40 @@ export interface ServiceRequest {
   status: 'waiting' | 'responded'
 }
 
+export type PointEntryType = 'earn' | 'redeem' | 'refund' | 'expire'
+
+export interface PointEntry {
+  id: string
+  type: PointEntryType
+  /** 带符号变动值：earn 为 +N；redeem / refund / expire 为 −N */
+  amount: number
+  createdAt: string
+  note: string
+  /** 到期时间（ISO 字符串）；仅 earn 必填，其余为 null */
+  expiresAt: string | null
+  /** 仅 expire 记录引用其来源 earn 明细 id，防止重复过期 */
+  refId?: string
+}
+
+export interface PointsCoupon {
+  id: string
+  value: number
+  redeemedPoints: number
+  createdAt: string
+  used: boolean
+}
+
+export interface PointsTier {
+  points: number
+  value: number
+}
+
+export interface PointsState {
+  balance: number
+  entries: PointEntry[]
+  coupons: PointsCoupon[]
+}
+
 export interface AppState {
   view: ViewName
   table: string | null
@@ -51,6 +85,7 @@ export interface AppState {
   services: ServiceRequest[]
   paid: boolean
   lastMessage: string
+  points: PointsState
 }
 
 export type AppAction =
@@ -64,6 +99,10 @@ export type AppAction =
   | { type: 'CALL_SERVICE'; service: string }
   | { type: 'RESPOND_SERVICES' }
   | { type: 'REQUEST_CANCEL'; uid: string }
-  | { type: 'PAY' }
+  | { type: 'PAY'; couponIds: string[] }
+  | { type: 'REDEEM_POINTS'; points: number; value: number }
+  | { type: 'GRANT_POINTS'; points: number }
+  | { type: 'APPROVE_CANCEL'; uid: string }
+  | { type: 'EXPIRE_POINTS' }
   | { type: 'RESET' }
   | { type: 'SET_MESSAGE'; message: string }

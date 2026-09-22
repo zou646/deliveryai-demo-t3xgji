@@ -102,11 +102,13 @@ export default function App() {
         serviceCount={waitingServices}
         language={i18n.language}
         elderly={elderly}
+        points={state.points}
         onToggleLanguage={toggleLanguage}
         onToggleElderly={handleToggleElderly}
         onView={changeView}
         onService={() => setServiceOpen(true)}
         onConsole={() => setConsoleOpen(true)}
+        onRedeem={(tier) => dispatch({ type: 'REDEEM_POINTS', points: tier.points, value: tier.value })}
       />
 
       {state.view === 'menu' && (
@@ -137,7 +139,7 @@ export default function App() {
       )}
 
       {state.view === 'checkout' && (
-        <CheckoutView items={state.orderItems} paid={state.paid} onPay={() => dispatch({ type: 'PAY' })} onBack={() => changeView('order')} />
+        <CheckoutView items={state.orderItems} points={state.points} paid={state.paid} onPay={(couponIds) => dispatch({ type: 'PAY', couponIds })} onBack={() => changeView('order')} />
       )}
 
       <ServiceSheet open={serviceOpen} requests={state.services} onOpenChange={setServiceOpen} onCall={(service) => dispatch({ type: 'CALL_SERVICE', service })} />
@@ -147,11 +149,16 @@ export default function App() {
         stage={state.orderStage}
         soldOut={state.soldOut}
         services={state.services}
+        items={state.orderItems}
+        points={state.points}
         onOpenChange={setConsoleOpen}
         onStage={(stage) => dispatch({ type: 'SET_STAGE', stage })}
         onSoldOut={(productId) => dispatch({ type: 'TOGGLE_SOLD_OUT', productId })}
         onRespond={() => dispatch({ type: 'RESPOND_SERVICES' })}
         onReset={() => { dispatch({ type: 'RESET' }); setConsoleOpen(false) }}
+        onApproveCancel={(uid) => dispatch({ type: 'APPROVE_CANCEL', uid })}
+        onGrantPoints={(n) => dispatch({ type: 'GRANT_POINTS', points: n })}
+        onExpirePoints={() => dispatch({ type: 'EXPIRE_POINTS' })}
       />
 
       <Dialog open={cartOpen} onOpenChange={setCartOpen}>
