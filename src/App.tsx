@@ -24,7 +24,6 @@ function createInitialState(): AppState {
   const search = new URLSearchParams(window.location.search)
   const requestedView = initialViewFromHash()
 
-  // preview=menu：预置一桌带购物车的点餐态，供设计/截图预览
   if (search.get('preview') === 'menu') {
     const product = products[2]
     const spec = [i18next.t('menu.option.full'), i18next.t('menu.option.original')].join(' · ')
@@ -37,8 +36,6 @@ function createInitialState(): AppState {
     }
   }
 
-  // 深链接：直接以 #/welcome 等地址打开时，先绑定示例桌台再进入对应视图；
-  // home 无需桌台，其余流程视图（welcome/menu/order/checkout）需要桌台上下文。
   if (requestedView && requestedView !== 'home') {
     return { ...initialState, table: 'A08', view: requestedView }
   }
@@ -56,7 +53,6 @@ export default function App() {
   const cartTotal = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const waitingServices = state.services.filter((service) => service.status === 'waiting').length
 
-  // 视图 ↔ URL hash 双向同步；未绑定桌台时只有 home 可达，其余地址回落到 home
   const canView = useCallback((view: ViewName) => view === 'home' || !!state.table, [state.table])
   const navigate = useCallback((view: ViewName) => dispatch({ type: 'SET_VIEW', view }), [])
   useViewRoute(state.view, { onNavigate: navigate, canView })
@@ -83,7 +79,7 @@ export default function App() {
   }
   const handleToggleElderly = () => {
     toggleElderly()
-    dispatch({ type: 'SET_MESSAGE', message: elderly ? '已切换为常规模式' : '已切换为老人模式' })
+    dispatch({ type: 'SET_MESSAGE', message: elderly ? t('common.elderly_mode_off') : t('common.elderly_mode_on') })
   }
 
   if (state.view === 'home' || !state.table) {

@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Coins, Gift, History, ReceiptText } from 'lucide-react'
 import { POINTS_TIERS } from '@/data/points'
-import type { PointEntryType, PointsState, PointsTier } from '@/types'
+import { formatDate, formatTime } from '@/lib/datetime'
+import type { PointEntryType, PointNoteKey, PointsState, PointsTier } from '@/types'
 
 interface PointsSectionProps {
   points: PointsState
@@ -16,6 +17,19 @@ const typeStyle: Record<PointEntryType, { labelKey: string; className: string }>
   redeem: { labelKey: 'points.type_redeem', className: 'bg-chili-50 text-chili-600' },
   refund: { labelKey: 'points.type_refund', className: 'bg-amber-100 text-amber-600' },
   expire: { labelKey: 'points.type_expire', className: 'bg-rice-200 text-charcoal-500' },
+}
+
+const noteKeyMap: Record<PointNoteKey, string> = {
+  earn: 'points.earn_note',
+  redeem: 'points.redeem_note',
+  refund: 'points.refund_note',
+  expire: 'points.expire_note',
+  grant: 'points.grant_note',
+}
+
+function entryNote(entry: PointsState['entries'][number], t: (key: string) => string): string {
+  const key = entry.noteKey ? noteKeyMap[entry.noteKey] : undefined
+  return key ? t(key) : (entry.note ?? '')
 }
 
 export function PointsSection({ points, onRedeem }: PointsSectionProps) {
@@ -59,10 +73,10 @@ export function PointsSection({ points, onRedeem }: PointsSectionProps) {
                 <div key={entry.id} className="flex items-center gap-3 rounded-xl border border-charcoal-900/5 bg-rice-50 p-3">
                   <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${style.className}`}><ReceiptText size={15} /></span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2"><span className={`rounded-full px-2 py-0.5 text-xs font-bold ${style.className}`}>{t(style.labelKey)}</span><span className="text-xs text-charcoal-500">{entry.createdAt}</span></div>
-                    <p className="mt-1 truncate text-sm text-charcoal-700">{entry.note}</p>
+                    <div className="flex items-center gap-2"><span className={`rounded-full px-2 py-0.5 text-xs font-bold ${style.className}`}>{t(style.labelKey)}</span><span className="text-xs text-charcoal-500">{formatTime(entry.createdAt, locale)}</span></div>
+                    <p className="mt-1 truncate text-sm text-charcoal-700">{entryNote(entry, t)}</p>
                     {entry.type === 'earn' && entry.expiresAt && (
-                      <p className="mt-0.5 text-xs text-charcoal-500">{t('points.expires', { date: new Date(entry.expiresAt).toLocaleDateString(locale, { year: 'numeric', month: '2-digit', day: '2-digit' }) })}</p>
+                      <p className="mt-0.5 text-xs text-charcoal-500">{t('points.expires', { date: formatDate(entry.expiresAt, locale) })}</p>
                     )}
                   </div>
                   <strong className={`shrink-0 font-extrabold ${entry.amount > 0 ? 'text-emerald-600' : 'text-charcoal-900'}`}>{entry.amount > 0 ? `+${entry.amount}` : entry.amount}</strong>

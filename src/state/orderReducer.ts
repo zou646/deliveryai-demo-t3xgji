@@ -2,6 +2,7 @@ import i18next from 'i18next'
 import { uid } from '@/lib/utils'
 import { calcCheckout } from '@/lib/checkout'
 import { expiresAtFor, pointsForAmount, unexpiredEarnEntries } from '@/lib/points'
+import { formatTime, nowIso } from '@/lib/datetime'
 import type { AppAction, AppState, PointEntry, PointsCoupon } from '@/types'
 
 export const initialState: AppState = {
@@ -25,102 +26,155 @@ const stageMessages: Record<string, string> = {
   served: 'message.stage_served',
 }
 
-const localeForLanguage = (lang: string) => (lang === 'en' ? 'en-US' : 'zh-CN')
-
-const localeTime = () => new Date().toLocaleTimeString(localeForLanguage(i18next.language), { hour: '2-digit', minute: '2-digit' })
-
-function earnEntry(amount: number, note: string): PointEntry {
+function earnEntry(amount: number, noteKey: PointEntry['noteKey']): PointEntry {
+  const now = nowIso()
   return {
     id: uid(),
     type: 'earn',
     amount,
-    createdAt: localeTime(),
-    note,
-    expiresAt: expiresAtFor(new Date().toISOString()),
+    createdAt: now,
+    noteKey,
+    expiresAt: expiresAtFor(now),
   }
 }
 
-function deductEntry(type: 'redeem' | 'refund' | 'expire', amount: number, note: string, refId?: string): PointEntry {
-  return { id: uid(), type, amount: -Math.abs(amount), createdAt: localeTime(), note, expiresAt: null, refId }
+function deductEntry(type: 'redeem' | 'refund' | 'expire', amount: number, noteKey: PointEntry['noteKey'], refId?: string): PointEntry {
+  return { id: uid(), type, amount: -Math.abs(amount), createdAt: nowIso(), noteKey, expiresAt: null, refId }
+}
+
+function localizeServiceType(key: string): string {
+  if (key === 'service.broth') return i18next.t('service.broth.name')
+  if (key === 'service.drinks') return i18next.t('service.drinks.name')
+  if (key === 'service.utensils') return i18next.t('service.utensils.name')
+  if (key === 'service.bill') return i18next.t('service.bill.name')
+  return key
+}
+
+function migratePointNote(entry: PointEntry): PointEntry {
+  if (entry.noteKey) return entry
+  const legacyMap: Record<string, PointEntry['noteKey']> = {
+    '消费获赠': 'earn',
+    '兑换菜品券': 'redeem',
+    '退菜回退': 'refund',
+    '积分过期': 'expire',
+    '演示发放': 'grant',
+    'Earned from purchase': 'earn',
+    'Redeemed dish coupon': 'redeem',
+    'Dish return refund': 'refund',
+    'Points expired': 'expire',
+    'Demo grant': 'grant',
+  }
+  const legacyNote = entry.note ?? ''
+  return { ...entry, noteKey: legacyMap[legacyNote] ?? 'grant' }
+}
+
+function migrateState(state: AppState): AppState {
+  let changed = false
+  const entries = state.points.entries.map((entry) => {
+    const migrated = migratePointNote(entry)
+    if (migrated !== entry) changed = true
+    return migrated
+  })
+  const services = state.services.map((request) => {
+    const key = String(request.typeKey ?? '')
+    if (key.startsWith('service.')) return request
+    const legacyType = String(request.type ?? '')
+    const reverseMap: Record<string, AppState['services'][number]['typeKey']> = {
+      '加汤': 'service.broth',
+      'Add broth': 'service.broth',
+      '酒水饮料': 'service.drinks',
+      'Drinks': 'service.drinks',
+      '餐具': 'service.utensils',
+      'Utensils': 'service.utensils',
+      '结账': 'service.bill',
+      'Bill': 'service.bill',
+    }
+    const typeKey = reverseMap[legacyType] ?? 'service.broth'
+    changed = true
+    return { ...request, typeKey }
+  })
+  if (!changed) return state
+  return { ...state, points: { ...state.points, entries }, services }
 }
 
 export function orderReducer(state: AppState, action: AppAction): AppState {
+  const current = migrateState(state)
   switch (action.type) {
     case 'BIND_TABLE':
-      return { ...state, table: action.table, view: 'welcome', lastMessage: i18next.t('message.bind_table', { table: action.table }) }
+      return { ...current, table: action.table, view: 'welcome', lastMessage: i18next.t('message.bind_table', { table: action.table }) }
     case 'SET_VIEW':
-      return { ...state, view: action.view }
+      return { ...current, view: action.view }
     case 'ADD_CART': {
-      const same = state.cart.find((item) => item.productId === action.item.productId && item.spec === action.item.spec && item.orderedBy === action.item.orderedBy)
+      const same = current.cart.find((item) => item.productId === action.item.productId && item.spec === action.item.spec && item.orderedBy === action.item.orderedBy)
       const cart = same
-        ? state.cart.map((item) => item.uid === same.uid ? { ...item, quantity: item.quantity + 1 } : item)
-        : [...state.cart, action.item]
-      return { ...state, cart, lastMessage: i18next.t('message.add_cart', { name: action.item.orderedBy, dish: action.item.name }) }
+        ? current.cart.map((item) => item.uid === same.uid ? { ...item, quantity: item.quantity + 1 } : item)
+        : [...current.cart, action.item]
+      return { ...current, cart, lastMessage: i18next.t('message.add_cart', { name: action.item.orderedBy, dish: action.item.name }) }
     }
     case 'CHANGE_QTY': {
-      const cart = state.cart
+      const cart = current.cart
         .map((item) => item.uid === action.uid ? { ...item, quantity: item.quantity + action.delta } : item)
         .filter((item) => item.quantity > 0)
-      return { ...state, cart }
+      return { ...current, cart }
     }
     case 'SUBMIT_ORDER': {
-      if (!state.cart.length) return state
-      const additions = state.cart.map((item) => ({ ...item, stage: 'submitted' as const }))
+      if (!current.cart.length) return current
+      const additions = current.cart.map((item) => ({ ...item, stage: 'submitted' as const }))
       return {
-        ...state,
-        orderItems: [...state.orderItems, ...additions],
+        ...current,
+        orderItems: [...current.orderItems, ...additions],
         cart: [],
         orderStage: 'submitted',
         view: 'order',
-        lastMessage: state.orderItems.length ? i18next.t('message.order_additional') : i18next.t('message.order_submitted'),
+        lastMessage: current.orderItems.length ? i18next.t('message.order_additional') : i18next.t('message.order_submitted'),
       }
     }
     case 'SET_STAGE':
       return {
-        ...state,
+        ...current,
         orderStage: action.stage,
-        orderItems: state.orderItems.map((item) => ({ ...item, stage: action.stage })),
+        orderItems: current.orderItems.map((item) => ({ ...item, stage: action.stage })),
         lastMessage: i18next.t(stageMessages[action.stage]),
       }
     case 'TOGGLE_SOLD_OUT':
       return {
-        ...state,
-        soldOut: state.soldOut.includes(action.productId)
-          ? state.soldOut.filter((id) => id !== action.productId)
-          : [...state.soldOut, action.productId],
+        ...current,
+        soldOut: current.soldOut.includes(action.productId)
+          ? current.soldOut.filter((id) => id !== action.productId)
+          : [...current.soldOut, action.productId],
         lastMessage: i18next.t('message.soldout_updated'),
       }
     case 'CALL_SERVICE': {
-      const serviceName = i18next.t(`${action.service}.name`)
+      const serviceKey = action.service
+      const serviceName = localizeServiceType(serviceKey)
       return {
-        ...state,
-        services: [...state.services, { id: uid(), type: serviceName, createdAt: localeTime(), status: 'waiting' }],
+        ...current,
+        services: [...current.services, { id: uid(), typeKey: serviceKey as AppState['services'][number]['typeKey'], createdAt: nowIso(), status: 'waiting' } as AppState['services'][number]],
         lastMessage: i18next.t('message.service_called', { service: serviceName }),
       }
     }
     case 'RESPOND_SERVICES':
-      return { ...state, services: state.services.map((service) => ({ ...service, status: 'responded' })), lastMessage: i18next.t('message.service_responded') }
+      return { ...current, services: current.services.map((service) => ({ ...service, status: 'responded' })), lastMessage: i18next.t('message.service_responded') }
     case 'REQUEST_CANCEL':
       return {
-        ...state,
-        orderItems: state.orderItems.map((item) => item.uid === action.uid ? { ...item, cancelState: 'requested' } : item),
+        ...current,
+        orderItems: current.orderItems.map((item) => item.uid === action.uid ? { ...item, cancelState: 'requested' } : item),
         lastMessage: i18next.t('message.cancel_requested'),
       }
     case 'PAY': {
-      // 幂等：已 paid 原样返回，不重复入账（REQ-001.5）
-      if (state.paid) return state
-      const checkout = calcCheckout(state.orderItems, state.points.coupons, action.couponIds)
-      const coupons: PointsCoupon[] = state.points.coupons.map((coupon) =>
+      if (current.paid) return current
+      const checkout = calcCheckout(current.orderItems, current.points.coupons, action.couponIds)
+      const coupons: PointsCoupon[] = current.points.coupons.map((coupon) =>
         action.couponIds.includes(coupon.id) ? { ...coupon, used: true } : coupon,
       )
-      let points = state.points
+      let points = current.points
       let message: string
       if (checkout.earned > 0) {
         const earned = pointsForAmount(checkout.basePayable)
         points = {
           ...points,
           balance: points.balance + earned,
-          entries: [...points.entries, earnEntry(earned, i18next.t('points.earn_note'))],
+          entries: [...points.entries, earnEntry(earned, 'earn')],
           coupons,
         }
         message = i18next.t('message.points_earned', { count: earned })
@@ -128,74 +182,72 @@ export function orderReducer(state: AppState, action: AppAction): AppState {
         points = { ...points, coupons }
         message = i18next.t('message.paid')
       }
-      return { ...state, points, paid: true, lastMessage: message }
+      return { ...current, points, paid: true, lastMessage: message }
     }
     case 'REDEEM_POINTS': {
-      // 余额不足或非法档位：原样返回（UI 已禁用，reducer 兜底）
-      if (action.points <= 0 || state.points.balance < action.points) return state
+      if (action.points <= 0 || current.points.balance < action.points) return current
       const coupon: PointsCoupon = {
         id: uid(),
         value: action.value,
         redeemedPoints: action.points,
-        createdAt: localeTime(),
+        createdAt: nowIso(),
         used: false,
       }
       return {
-        ...state,
+        ...current,
         points: {
-          balance: state.points.balance - action.points,
-          entries: [...state.points.entries, deductEntry('redeem', action.points, i18next.t('points.redeem_note'))],
-          coupons: [...state.points.coupons, coupon],
+          balance: current.points.balance - action.points,
+          entries: [...current.points.entries, deductEntry('redeem', action.points, 'redeem')],
+          coupons: [...current.points.coupons, coupon],
         },
         lastMessage: i18next.t('message.redeem_success'),
       }
     }
     case 'GRANT_POINTS': {
-      if (action.points <= 0) return state
+      if (action.points <= 0) return current
       return {
-        ...state,
+        ...current,
         points: {
-          ...state.points,
-          balance: state.points.balance + action.points,
-          entries: [...state.points.entries, earnEntry(action.points, i18next.t('points.grant_note'))],
+          ...current.points,
+          balance: current.points.balance + action.points,
+          entries: [...current.points.entries, earnEntry(action.points, 'grant')],
         },
         lastMessage: i18next.t('message.points_granted', { count: action.points }),
       }
     }
     case 'APPROVE_CANCEL': {
-      const item = state.orderItems.find((entry) => entry.uid === action.uid)
-      if (!item || item.cancelState === 'approved') return state
-      const orderItems = state.orderItems.map((entry) => entry.uid === action.uid ? { ...entry, cancelState: 'approved' as const } : entry)
-      // 已支付时按该项金额回退积分（ceil，0 截断）；未支付仅 approved 不回退（REQ-005.3）
-      if (!state.paid) {
-        return { ...state, orderItems, lastMessage: i18next.t('message.cancel_approved') }
+      const item = current.orderItems.find((entry) => entry.uid === action.uid)
+      if (!item || item.cancelState === 'approved') return current
+      const orderItems = current.orderItems.map((entry) => entry.uid === action.uid ? { ...entry, cancelState: 'approved' as const } : entry)
+      if (!current.paid) {
+        return { ...current, orderItems, lastMessage: i18next.t('message.cancel_approved') }
       }
       const refundPoints = pointsForAmount(item.price * item.quantity)
       if (refundPoints <= 0) {
-        return { ...state, orderItems, lastMessage: i18next.t('message.cancel_approved') }
+        return { ...current, orderItems, lastMessage: i18next.t('message.cancel_approved') }
       }
       return {
-        ...state,
+        ...current,
         orderItems,
         points: {
-          ...state.points,
-          balance: Math.max(0, state.points.balance - refundPoints),
-          entries: [...state.points.entries, deductEntry('refund', refundPoints, i18next.t('points.refund_note'))],
+          ...current.points,
+          balance: Math.max(0, current.points.balance - refundPoints),
+          entries: [...current.points.entries, deductEntry('refund', refundPoints, 'refund')],
         },
         lastMessage: i18next.t('message.refund_points', { count: refundPoints }),
       }
     }
     case 'EXPIRE_POINTS': {
-      const expiring = unexpiredEarnEntries(state.points.entries)
-      if (!expiring.length) return state
+      const expiring = unexpiredEarnEntries(current.points.entries)
+      if (!expiring.length) return current
       const expireSum = expiring.reduce((sum, entry) => sum + entry.amount, 0)
-      const expireEntries = expiring.map((entry) => deductEntry('expire', entry.amount, i18next.t('points.expire_note'), entry.id))
+      const expireEntries = expiring.map((entry) => deductEntry('expire', entry.amount, 'expire', entry.id))
       return {
-        ...state,
+        ...current,
         points: {
-          ...state.points,
-          balance: Math.max(0, state.points.balance - expireSum),
-          entries: [...state.points.entries, ...expireEntries],
+          ...current.points,
+          balance: Math.max(0, current.points.balance - expireSum),
+          entries: [...current.points.entries, ...expireEntries],
         },
         lastMessage: i18next.t('message.points_expired', { count: expireSum }),
       }
@@ -203,8 +255,17 @@ export function orderReducer(state: AppState, action: AppAction): AppState {
     case 'RESET':
       return { ...initialState, lastMessage: i18next.t('message.reset') }
     case 'SET_MESSAGE':
-      return { ...state, lastMessage: action.message }
+      return { ...current, lastMessage: action.message }
     default:
-      return state
+      return current
   }
+}
+
+export function serviceTypeLabel(request: Pick<AppState['services'][number], 'type' | 'typeKey'>): string {
+  if (request.typeKey) return localizeServiceType(request.typeKey)
+  return request.type ?? ''
+}
+
+export function ledgerTime(iso: string): string {
+  return formatTime(iso)
 }

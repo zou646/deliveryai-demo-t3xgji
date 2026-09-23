@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next'
 import { BellRing, CheckCircle2, Clock3, Droplets, GlassWater, Receipt, Soup, Utensils } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { formatTime } from '@/lib/datetime'
+import { serviceTypeLabel } from '@/state/orderReducer'
 import type { ServiceRequest } from '@/types'
 
 const services = [
@@ -38,7 +40,7 @@ export function ServiceSheet({ open, requests, onOpenChange, onCall }: ServiceSh
           <div className="mt-3 space-y-2">
             {requests.slice().reverse().map((request) => (
               <div key={request.id} className="flex items-center justify-between rounded-xl bg-white p-3 text-sm">
-                <span className="font-semibold text-charcoal-900">{request.type} <small className="ml-1 font-normal text-charcoal-500">{request.createdAt}</small></span>
+                <span className="font-semibold text-charcoal-900">{serviceTypeLabel(request)} <small className="ml-1 font-normal text-charcoal-500">{formatTime(request.createdAt)}</small></span>
                 <span className={`flex items-center gap-1 text-xs font-bold ${request.status === 'responded' ? 'text-emerald-600' : 'text-amber-500'}`}>{request.status === 'responded' ? <CheckCircle2 size={14} /> : <Clock3 size={14} />}{request.status === 'responded' ? t('service.responded') : t('service.waiting')}</span>
               </div>
             ))}

@@ -33,14 +33,18 @@ export interface OrderItem extends CartItem {
   cancelState?: 'requested' | 'approved'
 }
 
+export type ServiceTypeKey = 'service.broth' | 'service.drinks' | 'service.utensils' | 'service.bill'
+
 export interface ServiceRequest {
   id: string
-  type: string
+  type?: string
+  typeKey?: ServiceTypeKey
   createdAt: string
   status: 'waiting' | 'responded'
 }
 
 export type PointEntryType = 'earn' | 'redeem' | 'refund' | 'expire'
+export type PointNoteKey = 'earn' | 'redeem' | 'refund' | 'expire' | 'grant'
 
 export interface PointEntry {
   id: string
@@ -48,7 +52,8 @@ export interface PointEntry {
   /** 带符号变动值：earn 为 +N；redeem / refund / expire 为 −N */
   amount: number
   createdAt: string
-  note: string
+  note?: string
+  noteKey?: PointNoteKey
   /** 到期时间（ISO 字符串）；仅 earn 必填，其余为 null */
   expiresAt: string | null
   /** 仅 expire 记录引用其来源 earn 明细 id，防止重复过期 */

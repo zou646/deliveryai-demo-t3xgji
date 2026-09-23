@@ -61,11 +61,11 @@ export function TopBar({ table, view, serviceCount, language, elderly, points, o
             </DialogContent>
           </Dialog>
           <Button variant="outline" size="icon" onClick={onConsole} aria-label={t('common.aria_console')}><LayoutDashboard size={18} /></Button>
-          <Button variant="outline" size="icon" onClick={onToggleElderly} aria-label={elderly ? '切换至常规模式' : '切换至老人模式'}>
+          <Button variant="outline" size="icon" onClick={onToggleElderly} aria-label={elderly ? t('common.aria_elderly_off') : t('common.aria_elderly')}>
             <Accessibility size={18} className={elderly ? 'text-chili-500' : ''} />
           </Button>
           <Button variant="outline" size="sm" onClick={onToggleLanguage} aria-label={t('common.aria_lang')}>
-            <Languages size={16} />{language === 'zh' ? 'EN' : '中'}
+            <Languages size={16} />{language === 'zh' ? 'EN' : t('common.language_zh')}
           </Button>
         </div>
       </header>
