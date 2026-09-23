@@ -4,8 +4,10 @@ import { calcCheckout } from '@/lib/checkout'
 import { expiresAtFor, pointsForAmount, unexpiredEarnEntries } from '@/lib/points'
 import { formatTime, nowIso } from '@/lib/datetime'
 import type { AppAction, AppState, PointEntry, PointsCoupon } from '@/types'
+import { createInitialHotelState } from '@/state/hotelReducer'
 
 export const initialState: AppState = {
+  appModule: 'hotpot',
   view: 'home',
   table: null,
   diners: ['姚乾', '林溪', '陈默'],
@@ -17,6 +19,7 @@ export const initialState: AppState = {
   paid: false,
   lastMessage: i18next.t('message.welcome'),
   points: { balance: 0, entries: [], coupons: [] },
+  hotel: createInitialHotelState(),
 }
 
 const stageMessages: Record<string, string> = {
