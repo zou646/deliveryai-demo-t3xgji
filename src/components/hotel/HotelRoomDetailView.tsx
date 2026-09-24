@@ -11,13 +11,14 @@ interface HotelRoomDetailViewProps {
   room: HotelRoom
   checkIn: string
   checkOut: string
+  draftCount: number
   onBack: () => void
   onFilters: (patch: { checkIn?: string; checkOut?: string }) => void
   onAdd: (roomId: string, rooms: number) => void
   onGoCheckout: () => void
 }
 
-export function HotelRoomDetailView({ room, checkIn, checkOut, onBack, onFilters, onAdd, onGoCheckout }: HotelRoomDetailViewProps) {
+export function HotelRoomDetailView({ room, checkIn, checkOut, draftCount, onBack, onFilters, onAdd, onGoCheckout }: HotelRoomDetailViewProps) {
   const { t } = useTranslation()
   const [rooms, setRooms] = useState(1)
   const [guests, setGuests] = useState(room.capacity)
@@ -100,10 +101,15 @@ export function HotelRoomDetailView({ room, checkIn, checkOut, onBack, onFilters
             <Button
               className="mt-4 w-full"
               disabled={dateInvalid || rooms <= 0}
-              onClick={() => { onAdd(room.id, rooms); onGoCheckout() }}
+              onClick={() => onAdd(room.id, rooms)}
             >
               {t('hotel.add_draft')}
             </Button>
+            {draftCount > 0 && (
+              <Button variant="outline" className="mt-2 w-full" onClick={onGoCheckout}>
+                {t('hotel.go_checkout')}（{t('hotel.draft_count', { count: draftCount })}）
+              </Button>
+            )}
           </div>
         </aside>
       </div>

@@ -26,6 +26,7 @@ interface TopBarProps {
 
 export function TopBar({ module, view, table, serviceCount, language, elderly, points, pendingOrders = 0, onToggleLanguage, onToggleElderly, onView, onService, onConsole, onRedeem, onSwitchModule }: TopBarProps) {
   const { t } = useTranslation()
+  void pendingOrders
   const isHotel = module === 'hotel'
   const areaKey = table ? tableAreas[table] : null
   const tableLabel = areaKey ? `${table} · ${t(areaKey)}` : table ?? ''
@@ -34,7 +35,7 @@ export function TopBar({ module, view, table, serviceCount, language, elderly, p
   return (
     <>
       <div className="bg-charcoal-900 px-4 py-2 text-center text-xs font-semibold tracking-wide text-rice-100">
-        {isHotel ? 'Cloudnest · Hotel Booking Concept Demo' : t('common.banner')}
+        {isHotel ? t('common.banner_hotel') : t('common.banner')}
       </div>
       <header className="sticky top-0 z-30 border-b border-charcoal-900/5 bg-rice-50/95 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 lg:px-6">
@@ -72,7 +73,7 @@ export function TopBar({ module, view, table, serviceCount, language, elderly, p
           {isHotel ? (
             <>
               <Button variant="outline" size="icon" onClick={onService} className="relative" aria-label={t('hotel.nav_support')}>
-                <PhoneCall size={18} />{pendingOrders > 0 && <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-white bg-chili-500" />}
+                <PhoneCall size={18} />{serviceCount > 0 && <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-white bg-chili-500" />}
               </Button>
               <Button variant="outline" size="icon" onClick={onConsole} aria-label={t('hotel.nav_admin')}><LayoutDashboard size={18} /></Button>
             </>

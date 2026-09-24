@@ -43,8 +43,21 @@ export function useViewRoute(view: ViewName, { onNavigate, canView }: UseViewRou
   useEffect(() => {
     const handler = () => {
       const requested = hashToView(window.location.hash)
-      const defaultView: ViewName = isHotelView(view) ? 'hotel-home' : 'home'
-      const target = requested && (!canView || canView(requested)) ? requested : defaultView
+      if (!requested) {
+        // Invalid hash — reset to module-appropriate home and normalize URL
+        const fallback: ViewName = isHotelView(view) ? 'hotel-home' : 'home'
+        window.history.replaceState(null, '', viewToHash(fallback))
+        if (fallback !== view) onNavigate(fallback)
+        return
+      }
+      // 跨模块的合法视图也交给 onNavigate（App 侧负责 SET_MODULE + SET_VIEW）
+      // canView 仅在本模块内判定权限（例如未绑桌不能进菜单）。
+      if (isHotelView(requested) !== isHotelView(view)) {
+        if (requested !== view) onNavigate(requested)
+        return
+      }
+      const allowed = !canView || canView(requested)
+      const target: ViewName = allowed ? requested : (isHotelView(view) ? 'hotel-home' : (view === 'home' ? 'home' : 'home'))
       if (target !== requested) {
         window.history.replaceState(null, '', viewToHash(target))
       }

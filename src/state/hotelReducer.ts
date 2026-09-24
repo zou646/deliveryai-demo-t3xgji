@@ -37,10 +37,17 @@ export function hotelReducer(state: HotelState, action: AppAction): HotelState {
   switch (action.type) {
     case 'HOTEL_SET_FILTERS': {
       const next = { ...state.filters, ...action.filters }
+      // 价格区间归一化：始终保证 min<=max
+      if (next.minPrice > next.maxPrice) {
+        const tmp = next.minPrice
+        next.minPrice = next.maxPrice
+        next.maxPrice = tmp
+      }
+      // 日期非法：仍写入用户输入（输入框受控于 filters，必须回显），但给出错误提示；
+      // 加购/下单等关键路径会再次校验 isValidDateRange 阻止提交。
       if (!isValidDateRange(next.checkIn, next.checkOut)) {
         return pushMsg({ ...state, filters: next }, 'hotel.error.date_range')
       }
-      if (next.minPrice > next.maxPrice) next.maxPrice = next.minPrice
       return { ...state, filters: next }
     }
     case 'HOTEL_VIEW_ROOM':
@@ -100,8 +107,12 @@ export function hotelReducer(state: HotelState, action: AppAction): HotelState {
       const nights = nightsBetween(state.filters.checkIn, state.filters.checkOut)
       const items = buildOrderItems(state.rooms, state.draft, nights)
       const totalAmount = computeDraftSubtotal(state.rooms, state.draft, nights)
+      let orderId = genHotelOrderId()
+      for (let i = 0; i < 10 && state.orders.some((o) => o.id === orderId); i++) {
+        orderId = genHotelOrderId()
+      }
       const order: HotelOrder = {
-        id: genHotelOrderId(),
+        id: orderId,
         createdAt: nowIso(),
         checkIn: state.filters.checkIn,
         checkOut: state.filters.checkOut,

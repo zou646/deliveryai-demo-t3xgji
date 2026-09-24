@@ -111,12 +111,12 @@ export function buildOrderItems(rooms: HotelRoom[], draft: HotelDraftItem[], nig
     .filter((x): x is HotelOrderItem => !!x)
 }
 
-// 订单号：HTL + yyyymmddHHMMss + 4 位随机数字
+// 订单号：HTL + yyyymmddHHMMss + 6 位随机数字
 export function genHotelOrderId(): string {
   const d = new Date()
   const pad = (n: number) => String(n).padStart(2, '0')
   const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
-  const rnd = String(Math.floor(Math.random() * 10000)).padStart(4, '0')
+  const rnd = String(Math.floor(Math.random() * 1000000)).padStart(6, '0')
   return `HTL${stamp}${rnd}`
 }
 

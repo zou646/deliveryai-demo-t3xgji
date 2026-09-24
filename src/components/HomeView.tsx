@@ -28,7 +28,7 @@ export function HomeView({ onBind, onEnterHotel }: HomeViewProps) {
             <Sparkles size={14} /> {t('common.concept_badge')}
           </div>
           <h1 className="mx-auto max-w-2xl text-4xl font-extrabold leading-tight text-charcoal-900 sm:text-5xl lg:text-6xl">
-            一个演示壳，<span className="text-chili-500">两条交易链路</span>
+            {t('home.hero_head')}<span className="text-chili-500">{t('home.hero_tail')}</span>
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-charcoal-500">{t('bind.desc')}</p>
         </section>
@@ -63,8 +63,8 @@ export function HomeView({ onBind, onEnterHotel }: HomeViewProps) {
             <div className="flex items-center gap-2 text-chili-600"><BedDouble size={18} /><h3 className="text-lg font-bold">{t('hotel.brand_name')} · {t('hotel.subtitle')}</h3></div>
             <p className="mt-2 text-sm leading-6 text-charcoal-500">{t('hotel.cta_hotel_desc')}</p>
             <ul className="mt-3 space-y-2 text-sm text-charcoal-700">
-              <li className="flex items-center gap-2"><span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-chili-50 text-chili-600"><BedDouble size={13} /></span>房型搜索 / 日期选择 / 多间多晚</li>
-              <li className="flex items-center gap-2"><span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-chili-50 text-chili-600"><MapPin size={13} /></span>订单管理 / 客服工单 / 运营后台</li>
+              <li className="flex items-center gap-2"><span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-chili-50 text-chili-600"><BedDouble size={13} /></span>{t('home.feature_rooms')}</li>
+              <li className="flex items-center gap-2"><span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-chili-50 text-chili-600"><MapPin size={13} /></span>{t('home.feature_ops')}</li>
             </ul>
             <Button onClick={onEnterHotel} className="mt-4 w-full">{t('hotel.cta_hotel')}<ChevronRight size={17} /></Button>
           </div>

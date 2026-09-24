@@ -29,7 +29,7 @@ export function HotelHomeView({ filters, rooms, draftCount, onFilters, onSelectR
         <h1 className="mt-2 text-2xl font-extrabold text-charcoal-900 sm:text-3xl">{t('hotel.search_title')}</h1>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="flex flex-col gap-1 rounded-2xl bg-white p-3 shadow-sm">
-            <span className="flex items-center gap-1 text-xs font-semibold text-charcoal-500"><MapPin size={13} />City</span>
+            <span className="flex items-center gap-1 text-xs font-semibold text-charcoal-500"><MapPin size={13} />{t('hotel.city_label')}</span>
             <select value={filters.city} onChange={(e) => onFilters({ city: e.target.value })} className="bg-transparent text-sm font-semibold text-charcoal-900 outline-none">
               <option value="">{t('hotel.city_all')}</option>
               {HOTEL_CITIES.map((c) => <option key={c} value={c}>{t(`hotel.cities.${c}`)}</option>)}
@@ -57,7 +57,7 @@ export function HotelHomeView({ filters, rooms, draftCount, onFilters, onSelectR
       {/* Draft CTA */}
       {draftCount > 0 && (
         <div className="mt-5 flex items-center justify-between rounded-2xl border border-chili-500/20 bg-chili-50 px-4 py-3 shadow-sm">
-          <p className="text-sm font-semibold text-chili-700">{t('cart.item_count', { count: draftCount }).replace('份菜品', '个房型')}</p>
+          <p className="text-sm font-semibold text-chili-700">{t('hotel.draft_count', { count: draftCount })}</p>
           <Button onClick={onGoCheckout} size="sm">{t('hotel.go_checkout')}</Button>
         </div>
       )}

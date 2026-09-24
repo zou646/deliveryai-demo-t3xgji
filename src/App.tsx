@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import i18next from 'i18next'
 import { useTranslation } from 'react-i18next'
-import { BedDouble, ClipboardList, ConciergeBell, Headphones, Home as HomeIcon, LayoutDashboard, Menu as MenuIcon, Receipt, ShoppingBasket } from 'lucide-react'
+import { BedDouble, ClipboardList, ConciergeBell, Flame, Headphones, Home as HomeIcon, LayoutDashboard, Menu as MenuIcon, Receipt, ShoppingBasket } from 'lucide-react'
 import { HomeView } from '@/components/HomeView'
 import { WelcomeView } from '@/components/WelcomeView'
 import { CartPanel } from '@/components/CartPanel'
@@ -35,7 +35,7 @@ function createInitialState(): AppState {
   const requestedView = initialViewFromHash()
 
   if (requestedView && isHotelView(requestedView)) {
-    return { ...initialState, appModule: 'hotel', view: requestedView }
+    return { ...initialState, appModule: 'hotel', view: requestedView, lastMessage: initialState.hotel.lastMessage }
   }
 
   if (search.get('preview') === 'menu') {
@@ -69,6 +69,10 @@ export default function App() {
   const [consoleOpen, setConsoleOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
   const [paying, setPaying] = useState(false)
+  const hotelPayTimerRef = useRef<number | null>(null)
+  useEffect(() => () => {
+    if (hotelPayTimerRef.current !== null) { clearTimeout(hotelPayTimerRef.current); hotelPayTimerRef.current = null }
+  }, [])
 
   const isHotel = state.appModule === 'hotel'
   const cartTotal = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
@@ -76,11 +80,22 @@ export default function App() {
   const waitingHotelTickets = state.hotel.tickets.filter((t) => t.status === 'waiting').length
 
   const canView = useCallback((view: ViewName) => {
-    if (isHotelView(view)) return true // 酒店模块全部视图可达
+    const wantHotel = isHotelView(view)
+    if (wantHotel) return state.appModule === 'hotel'
+    if (state.appModule !== 'hotpot') return false
     return view === 'home' || !!state.table
-  }, [state.table])
+  }, [state.table, state.appModule])
 
-  const navigate = useCallback((view: ViewName) => dispatch({ type: 'SET_VIEW', view }), [])
+  const navigate = useCallback((view: ViewName) => {
+    const wantHotel = isHotelView(view)
+    const needSwitch = wantHotel !== (state.appModule === 'hotel')
+    if (needSwitch) {
+      dispatch({ type: 'SET_MODULE', module: wantHotel ? 'hotel' : 'hotpot' })
+      queueMicrotask(() => dispatch({ type: 'SET_VIEW', view }))
+      return
+    }
+    dispatch({ type: 'SET_VIEW', view })
+  }, [state.appModule])
   useViewRoute(state.view, { onNavigate: navigate, canView })
 
   useEffect(() => {
@@ -118,7 +133,9 @@ export default function App() {
   const hotelPay = (orderId: string, method: 'wechat' | 'alipay' | 'card' | 'mock') => {
     if (paying) return
     setPaying(true)
-    setTimeout(() => {
+    if (hotelPayTimerRef.current !== null) clearTimeout(hotelPayTimerRef.current)
+    hotelPayTimerRef.current = window.setTimeout(() => {
+      hotelPayTimerRef.current = null
       setPaying(false)
       dispatch({ type: 'HOTEL_PAY_ORDER', orderId, method })
     }, 900)
@@ -176,6 +193,7 @@ export default function App() {
             room={currentRoom}
             checkIn={state.hotel.filters.checkIn}
             checkOut={state.hotel.filters.checkOut}
+            draftCount={state.hotel.draft.length}
             onBack={() => changeView('hotel-home')}
             onFilters={(patch) => dispatch({ type: 'HOTEL_SET_FILTERS', filters: patch })}
             onAdd={hotelAddDraft}
@@ -263,11 +281,12 @@ export default function App() {
         />
 
         {/* Mobile bottom nav for hotel */}
-        <nav className="safe-bottom fixed bottom-0 left-0 right-0 z-30 grid grid-cols-4 border-t border-charcoal-900/5 bg-white/95 px-2 pt-2 backdrop-blur lg:hidden">
+        <nav className="safe-bottom fixed bottom-0 left-0 right-0 z-30 grid grid-cols-5 border-t border-charcoal-900/5 bg-white/95 px-2 pt-2 backdrop-blur lg:hidden">
           <MobileNav active={state.view === 'hotel-home' || state.view === 'hotel-room'} icon={HomeIcon} label={t('hotel.nav_home')} onClick={() => changeView('hotel-home')} />
           <MobileNav active={state.view === 'hotel-orders' || state.view === 'hotel-order-detail'} icon={Receipt} label={t('hotel.nav_orders')} onClick={() => changeView('hotel-orders')} badge={state.hotel.orders.filter((o) => o.status === 'pending_payment').length} />
           <MobileNav active={hotelSupportOpen} icon={Headphones} label={t('hotel.nav_support')} onClick={() => hotelOpenSupport(undefined, 'faq')} badge={waitingHotelTickets} />
           <MobileNav active={state.view === 'hotel-admin'} icon={LayoutDashboard} label={t('hotel.nav_admin')} onClick={() => changeView('hotel-admin')} />
+          <MobileNav active={false} icon={Flame} label={t('common.subtitle')} onClick={() => switchModule('hotpot')} />
         </nav>
 
         <div className="pointer-events-none fixed left-1/2 top-24 z-40 -translate-x-1/2 rounded-full bg-charcoal-900/90 px-4 py-2 text-xs font-semibold text-white shadow-float">

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, CalendarDays, CreditCard, Headphones, RotateCcw, UserRound, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -31,14 +31,34 @@ export function HotelOrderDetailView({ order, onBack, onPay, onCancel, onRebook,
     try { return new Date(order.createdAt).toLocaleString() } catch { return order.createdAt }
   }, [order.createdAt])
 
-  const doPay = () => {
-    setPaying(true)
-    // 模拟支付 1s 加载
-    setTimeout(() => {
+  const payTimerRef = useRef<number | null>(null)
+
+  // 支付完成（状态由 pending_payment 变为 paid/cancelled 等）时关闭弹窗并复位加载态
+  useEffect(() => {
+    if (order.status !== 'pending_payment') {
+      if (payTimerRef.current !== null) {
+        clearTimeout(payTimerRef.current)
+        payTimerRef.current = null
+      }
       setPaying(false)
       setPayOpen(false)
-      onPay(order.id, payMethod)
-    }, 900)
+    }
+  }, [order.status])
+
+  // 组件卸载 / 弹窗关闭时清理遗留 timer（防止用户按 Esc 后仍触发支付）
+  useEffect(() => {
+    return () => {
+      if (payTimerRef.current !== null) {
+        clearTimeout(payTimerRef.current)
+        payTimerRef.current = null
+      }
+    }
+  }, [])
+
+  const doPay = () => {
+    if (paying) return
+    setPaying(true)
+    onPay(order.id, payMethod)
   }
 
   return (
@@ -99,7 +119,7 @@ export function HotelOrderDetailView({ order, onBack, onPay, onCancel, onRebook,
         )}
       </div>
 
-      <Dialog open={payOpen} onOpenChange={setPayOpen}>
+      <Dialog open={payOpen} onOpenChange={(open) => { if (!open && paying) return; setPayOpen(open) }}>
         <DialogContent title={t('hotel.pay_title')} className="md:max-w-md">
           <p className="mt-2 text-sm text-charcoal-500">{t('hotel.select_payment')}</p>
           <div className="mt-4 space-y-2">

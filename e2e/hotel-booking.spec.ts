@@ -40,30 +40,30 @@ const L = {
   myTickets: /我的工单|My tickets/,
   ticketWaiting: /待处理|Pending/,
   ticketProcessed: /已处理|Resolved/,
-  adminTitle: /酒店运营后台|Hotel Admin/,
-  adminRooms: /房型管理|Rooms/,
+  adminTitle: /酒店运营后台|Hotel (Admin|Operations)/,
+  adminRooms: /房型管理|Room types/,
   adminTickets: /工单处理|Tickets/,
-  adminAddRoom: /新增房型|Add Room|New Room/,
+  adminAddRoom: /新增房型|New room/i,
   adminSave: /保存|Save/,
-  adminRespond: '回复',
+  adminRespond: /回复|Reply/,
   dateError: /离店日期需晚于入住日期|Check-out must be after check-in/,
   phoneError: /11.*手机号|11-digit/,
   nameError: /填写入住人姓名|guest name/,
   contentShort: /内容至少 5 个字|at least 5 characters/,
   paidMsg: /支付成功|Payment successful/,
   cancelledMsg: /订单已取消|cancelled/,
-  ticketRespondedMsg: /工单已响应|Ticket responded/,
-  roomCreatedMsg: /房型已新增|Room created/,
+  ticketRespondedMsg: /工单已响应|Ticket replied/,
+  roomCreatedMsg: /房型已新增|Room type created/,
   navSupport: /^客服$|^Support$/,
   navAdmin: /^后台$|^Admin$/,
   hotpotModuleTab: '火锅点单',
   hotelModuleTab: '酒店预订',
   remaining: /剩余|rooms left/,
-  roomNameField: '房型名称',
-  hotelNameField: '酒店名称',
-  addressField: '地址',
-  priceField: '每晚价格',
-  stockField: '可订数量',
+  roomNameField: /房型名称|Room name/,
+  hotelNameField: /酒店名称|Hotel name/,
+  addressField: /^地址$|^Address$/,
+  priceField: /每晚价格|Price per night/,
+  stockField: /可订数量|Stock/,
   total: /合计|Total/,
   pendingStatus: /待支付|Pending/,
   paidStatus: /已支付|Paid/,
@@ -145,12 +145,19 @@ test.describe('订酒店 MVP - 冒烟 E2E', () => {
     const unit = await firstRoomUnitPrice(page)
     await openFirstRoom(page)
     const aside = page.locator('aside')
-    // "共 N 晚，M 间，合计 ¥X" 行
     const totalLine = aside.getByText(/合计 ¥|total /)
     await expect(totalLine).toContainText(`¥${(unit * 1 * 1).toFixed(2)}`)
-    // 点间数 +（aside 内第一个 inc 按钮是间数）
+    // 加一间 → 单价 × 2 间 × 1 晚
     await aside.locator('button[aria-label="inc"]').first().click()
     await expect(totalLine).toContainText(`¥${(unit * 2 * 1).toFixed(2)}`)
+    // 离店日期 +1 天 → 共 2 晚：单价 × 2 间 × 2 晚
+    const inputs = aside.locator('input[type="date"]')
+    const co = await inputs.nth(1).inputValue()
+    const [y, m, d] = co.split('-').map(Number)
+    const later = new Date(y, m - 1, d + 1)
+    const laterStr = `${later.getFullYear()}-${String(later.getMonth() + 1).padStart(2, '0')}-${String(later.getDate()).padStart(2, '0')}`
+    await inputs.nth(1).fill(laterStr)
+    await expect(totalLine).toContainText(`¥${(unit * 2 * 2).toFixed(2)}`)
   })
 
   test('HOTEL-003: 日期非法时阻止加购并显示错误提示', async ({ page }) => {
@@ -173,6 +180,8 @@ test.describe('订酒店 MVP - 冒烟 E2E', () => {
     await enterHotel(page)
     await openFirstRoom(page)
     await page.getByRole('button', { name: L.addDraft }).click()
+    // P1-2: 加入预订后停留在详情页，由顶部 Draft CTA 进入结算
+    await page.locator('main').getByRole('button', { name: /去预订|Go to checkout/ }).first().click()
     await expect(page).toHaveURL(/#\/hotel-checkout$/)
     await page.getByRole('button', { name: L.submitOrder }).click()
     await expect(page.getByText(L.nameError)).toBeVisible()
@@ -187,6 +196,8 @@ test.describe('订酒店 MVP - 冒烟 E2E', () => {
     const unit = await firstRoomUnitPrice(page)
     const { roomName } = await openFirstRoom(page)
     await page.getByRole('button', { name: L.addDraft }).click()
+    // P1-2: 加入预订后停留在详情页，由顶部 Draft CTA 进入结算
+    await page.locator('main').getByRole('button', { name: /去预订|Go to checkout/ }).first().click()
     await expect(page).toHaveURL(/#\/hotel-checkout$/)
     await fillGuestValid(page)
     await page.getByRole('button', { name: L.submitOrder }).click()
@@ -210,6 +221,8 @@ test.describe('订酒店 MVP - 冒烟 E2E', () => {
     await enterHotel(page)
     await openFirstRoom(page)
     await page.getByRole('button', { name: L.addDraft }).click()
+    // P1-2: 加入预订后停留在详情页，由顶部 Draft CTA 进入结算
+    await page.locator('main').getByRole('button', { name: /去预订|Go to checkout/ }).first().click()
     await expect(page).toHaveURL(/#\/hotel-checkout$/)
     await fillGuestValid(page)
     await page.getByRole('button', { name: L.submitOrder }).click()
@@ -234,6 +247,8 @@ test.describe('订酒店 MVP - 冒烟 E2E', () => {
     await enterHotel(page)
     await openFirstRoom(page)
     await page.getByRole('button', { name: L.addDraft }).click()
+    // P1-2: 加入预订后停留在详情页，由顶部 Draft CTA 进入结算
+    await page.locator('main').getByRole('button', { name: /去预订|Go to checkout/ }).first().click()
     await expect(page).toHaveURL(/#\/hotel-checkout$/)
     await fillGuestValid(page)
     await page.getByRole('button', { name: L.submitOrder }).click()
@@ -272,6 +287,8 @@ test.describe('订酒店 MVP - 冒烟 E2E', () => {
     const remaining0 = await card0.getByText(L.remaining).innerText()
     await openFirstRoom(page)
     await page.getByRole('button', { name: L.addDraft }).click()
+    // P1-2: 加入预订后停留在详情页，由顶部 Draft CTA 进入结算
+    await page.locator('main').getByRole('button', { name: /去预订|Go to checkout/ }).first().click()
     await expect(page).toHaveURL(/#\/hotel-checkout$/)
     await fillGuestValid(page)
     await page.getByRole('button', { name: L.submitOrder }).click()
@@ -300,8 +317,8 @@ test.describe('订酒店 MVP - 冒烟 E2E', () => {
     await page.getByRole('button', { name: L.adminAddRoom }).click()
     const dlg = page.getByRole('dialog')
     await expect(dlg).toBeVisible()
-    const fillField = (labelText: string, val: string) =>
-      dlg.locator('label').filter({ hasText: labelText }).locator('input').first().fill(val)
+    const fillField = (labelRe: RegExp, val: string) =>
+      dlg.getByLabel(labelRe).first().fill(val)
     await fillField(L.roomNameField, 'E2E 测试海景大床房')
     await fillField(L.hotelNameField, 'E2E 测试酒店')
     await fillField(L.addressField, '测试路 1 号')
@@ -319,6 +336,8 @@ test.describe('订酒店 MVP - 冒烟 E2E', () => {
     await enterHotel(page)
     await openFirstRoom(page)
     await page.getByRole('button', { name: L.addDraft }).click()
+    // P1-2: 加入预订后停留在详情页，由顶部 Draft CTA 进入结算
+    await page.locator('main').getByRole('button', { name: /去预订|Go to checkout/ }).first().click()
     await expect(page).toHaveURL(/#\/hotel-checkout$/)
     await fillGuestValid(page)
     await page.getByRole('button', { name: L.submitOrder }).click()

@@ -236,6 +236,7 @@ function Field({ label, value, onChange, type }: { label: string; value: string;
 
 
 function TicketRow({ tk, order, onRespond }: { tk: HotelTicket; order?: HotelOrder; onRespond: (r: string) => void }) {
+  const { t } = useTranslation()
   const [resp, setResp] = useState('')
   return (
     <div key={tk.id} className="rounded-3xl border border-charcoal-900/5 bg-rice-50 p-4 shadow-sm">
@@ -252,8 +253,8 @@ function TicketRow({ tk, order, onRespond }: { tk: HotelTicket; order?: HotelOrd
       {tk.response && <div className="mt-2 rounded-xl bg-white p-3 text-sm"><p className="text-xs font-semibold text-chili-600">Reply</p><p className="mt-1 text-charcoal-700">{tk.response}</p></div>}
       {tk.status === 'waiting' && (
         <div className="mt-3 flex gap-2">
-          <input value={resp} onChange={(e) => setResp(e.target.value)} placeholder="回复内容" className="min-w-0 flex-1 rounded-xl border border-charcoal-900/10 bg-white px-3 py-2 text-sm focus:border-chili-500 focus:outline-none" />
-          <Button size="sm" onClick={() => resp.trim() && onRespond(resp.trim())}>回复</Button>
+          <input value={resp} onChange={(e) => setResp(e.target.value)} placeholder={t('hotel.admin_reply_ph')} className="min-w-0 flex-1 rounded-xl border border-charcoal-900/10 bg-white px-3 py-2 text-sm focus:border-chili-500 focus:outline-none" />
+          <Button size="sm" onClick={() => resp.trim() && onRespond(resp.trim())}>{t('hotel.admin_respond')}</Button>
         </div>
       )}
     </div>
