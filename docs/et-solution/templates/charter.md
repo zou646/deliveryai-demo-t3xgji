@@ -1,0 +1,27 @@
+# Exploratory Testing Charter（人读摘要）
+
+- **会话 ID**: et-YYYYMMDD-<feature>-<n>
+- **模式**: S+ / X
+- **被测 URL**: <https://...>
+- **Commit / 版本**: <sha>
+- **Target（目标范围）**:
+- **Scope（视图×状态矩阵）**:
+  - 视图：
+  - 状态维度（语言 / 视口 / 余额段 / 订单状态）：
+  - 显式排除（带排除码 EX-XXX）：
+- **Risks（本次重点反模式，引用 rules/risks.md 编号）**：
+- **Thresholds（门禁阈值）**：S≥? / V≥? / C=1.0 / console_errors_max_unlisted=0
+- **Timebox**: <n> 分钟（S+ 默认 25，X 每个 Executor 20）
+- **Executor 分配**：
+  - A：<主路径+反模式>
+  - B（仅 X 模式）：<破坏/奇怪路径，不看 A 的结果>
+- **Deliverable**:
+  - 覆盖率报告（S/V/C + 未覆盖项 + 排除码）
+  - Bug 清单（含截图 + 严重度 + 复现）
+  - 建议补入 E2E 的用例片段
+  - 每步截图
+- **Planner**: <name/agent>
+- **Monitor**: <name/agent>
+- **Executor A/B**: <name/agent>
+- **Reviewer**: <name/agent>
+- **开始时间**: <ISO>

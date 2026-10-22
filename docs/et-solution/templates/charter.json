@@ -1,0 +1,47 @@
+{
+  "$schema": "exploratory-testing-charter/1.1",
+  "session_id": "et-YYYYMMDD-<feature>-<n>",
+  "mode": "S+|X",
+  "target": {
+    "url": "<https://...>",
+    "commit": "<sha>",
+    "feature": "<feature name>"
+  },
+  "scope": {
+    "views": ["home", "welcome", "menu", "order", "checkout", "member", "member.ledger", "member.redeem", "console"],
+    "state_matrix": {
+      "language": ["zh", "en"],
+      "viewport": [{"w":1280,"h":720,"label":"desktop"}],
+      "balance_segments": [0, 100, 600, 1000, 5000],
+      "order_states": ["empty", "submitted", "unpaid", "paid", "refund_requested", "refunded"]
+    },
+    "exclusions": [
+      {"code": "EX-SCRIPTED", "pattern": "e2e/points.spec.ts::REQ-001*", "reason": "已由脚本化 E2E 覆盖"},
+      {"code": "EX-KNOWN", "pattern": "*super-spicy*", "reason": "已知非阻塞遗留"}
+    ],
+    "console_allowlist": []
+  },
+  "steps": [
+    {
+      "id": "S1",
+      "title": "<步骤标题>",
+      "action": {"type": "click|fill|goto|press|wait", "target": "<元素 role+name 或 url>", "value": "<可选>"},
+      "expected": {
+        "view": "menu",
+        "subview": null,
+        "elements_triggered": ["menu::button::加入本桌购物车"],
+        "state": {"points_balance": null, "dialog_open": null},
+        "no_new_console_errors": true
+      }
+    }
+  ],
+  "risks_to_cover": ["A1","A2","B1","B4","C1","D1","E2","E5","F2","G5","H1","H2"],
+  "thresholds": {"S": 0.98, "V": 0.95, "C": 1.0, "console_errors_max_unlisted": 0},
+  "timebox_minutes": 25,
+  "deliverables": {
+    "coverage_report": true,
+    "bug_list": true,
+    "e2e_patches": true,
+    "screenshots_per_step": true
+  }
+}
